@@ -73,9 +73,6 @@ export const CreatableSelect: FC<CreatableSelectProps> = memo(
           color: isDisabled ? textColorDisabled : textColor,
         };
       },
-      // multiValueRemove: (base) => {
-      //   return { ...base, display: 'none' };
-      // },
     };
     return (
       <ReactCreatableSelect
