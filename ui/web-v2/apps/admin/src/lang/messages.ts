@@ -1270,7 +1270,7 @@ export const messages = {
     }),
     selectFlag: defineMessage({
       id: 'feature.selectFlag',
-      defaultMessage: 'Select a flag',
+      defaultMessage: 'Select a feature flag',
     }),
     selectVariation: defineMessage({
       id: 'feature.selectVariation',
