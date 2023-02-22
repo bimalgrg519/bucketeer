@@ -29,11 +29,13 @@ import { Option, Select } from '../Select';
 export interface ClauseTypeMap {
   EVENT_RATE: 'bucketeer.autoops.OpsEventRateClause';
   DATETIME: 'bucketeer.autoops.DatetimeClause';
+  WEBHOOK: 'bucketeer.autoops.WebhookClause';
 }
 
 export const ClauseType: ClauseTypeMap = {
   EVENT_RATE: 'bucketeer.autoops.OpsEventRateClause',
   DATETIME: 'bucketeer.autoops.DatetimeClause',
+  WEBHOOK: 'bucketeer.autoops.WebhookClause',
 };
 
 interface FeatureAutoOpsRulesFormProps {
@@ -375,9 +377,15 @@ export const clauseTypeOptionDatetime = {
   label: intl.formatMessage(messages.autoOps.datetimeClauseType),
 };
 
+export const clauseTypeOptionWebhook = {
+  value: ClauseType.WEBHOOK.toString(),
+  label: intl.formatMessage(messages.autoOps.webhookClauseType),
+};
+
 export const clauseTypeOptions = [
   clauseTypeOptionEventRate,
   clauseTypeOptionDatetime,
+  clauseTypeOptionWebhook,
 ];
 
 export const createClauseTypeOption = (
@@ -413,8 +421,12 @@ export const ClauseInput: FC<ClauseInputProps> = ({
   });
   const selectedClauseTypeOptions =
     opsType === OpsType.ENABLE_FEATURE.toString()
-      ? [clauseTypeOptionDatetime]
-      : [clauseTypeOptionEventRate, clauseTypeOptionDatetime];
+      ? [clauseTypeOptionDatetime, clauseTypeOptionWebhook]
+      : [
+          clauseTypeOptionEventRate,
+          clauseTypeOptionWebhook,
+          clauseTypeOptionDatetime,
+        ];
   const clauseType = useWatch({
     control,
     name: `${clauseName}.clauseType`,

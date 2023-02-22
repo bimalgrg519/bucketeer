@@ -115,6 +115,7 @@
   "autoOps.opsEventRateClause.goal": "ゴール",
   "autoOps.opsEventRateClause.minCount": "最低カウント",
   "autoOps.rule": "ルール",
+  "autoOps.webhookClauseType": "Webhook",
   "button.add": "追加",
   "button.addCondition": "条件を追加",
   "button.addOperation": "オペレーションを追加",

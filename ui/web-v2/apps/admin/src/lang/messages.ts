@@ -368,6 +368,10 @@ export const messages = {
       id: 'autoOps.datetimeClauseType',
       defaultMessage: 'Schedule',
     }),
+    webhookClauseType: defineMessage({
+      id: 'autoOps.webhookClauseType',
+      defaultMessage: 'Webhook',
+    }),
     opsEventRateClause: {
       featureVersion: defineMessage({
         id: 'autoOps.opsEventRateClause.featureVersion',
