@@ -1,3 +1,6 @@
+import { WEBHOOK_LIST_PAGE_SIZE } from '@/constants/webhook';
+import { listWebhooks } from '@/modules/webhooks';
+import { Webhook } from '@/proto/autoops/webhook_pb';
 import { MinusCircleIcon, XIcon } from '@heroicons/react/solid';
 import { SerializedError } from '@reduxjs/toolkit';
 import React, { FC, memo, useEffect, useCallback } from 'react';
@@ -8,7 +11,7 @@ import {
   useWatch,
 } from 'react-hook-form';
 import { useIntl } from 'react-intl';
-import { useSelector, shallowEqual } from 'react-redux';
+import { useSelector, shallowEqual, useDispatch } from 'react-redux';
 import { v4 as uuid } from 'uuid';
 
 import { intl } from '../../lang';
@@ -16,11 +19,13 @@ import { messages } from '../../lang/messages';
 import { AppState } from '../../modules';
 import { selectById as selectFeatureById } from '../../modules/features';
 import { selectAll as selectAllGoals } from '../../modules/goals';
-import { useIsEditable } from '../../modules/me';
+import { useIsEditable, useCurrentEnvironment } from '../../modules/me';
+import { selectAll } from '../../modules/webhooks';
 import { OpsType, OpsTypeMap } from '../../proto/autoops/auto_ops_rule_pb';
 import { OpsEventRateClause } from '../../proto/autoops/clause_pb';
 import { Goal } from '../../proto/experiment/goal_pb';
 import { Feature } from '../../proto/feature/feature_pb';
+import { AppDispatch } from '../../store';
 import { classNames } from '../../utils/css';
 import { DatetimePicker } from '../DatetimePicker';
 import { DetailSkeleton } from '../DetailSkeleton';
@@ -407,8 +412,11 @@ export const ClauseInput: FC<ClauseInputProps> = ({
   ruleIdx,
   clauseIdx,
 }) => {
+  const dispatch = useDispatch<AppDispatch>();
   const editable = useIsEditable();
   const methods = useFormContext();
+  const currentEnvironment = useCurrentEnvironment();
+
   const {
     control,
     formState: { errors },
@@ -419,6 +427,17 @@ export const ClauseInput: FC<ClauseInputProps> = ({
     control,
     name: `${ruleName}.opsType`,
   });
+  const webhookList = useSelector<AppState, Webhook.AsObject[]>(
+    (state) => selectAll(state.webhook),
+    shallowEqual
+  );
+  const isLoading = useSelector<AppState, boolean>(
+    (state) => state.webhook.loading,
+    shallowEqual
+  );
+
+  console.log('webhook', webhookList);
+
   const selectedClauseTypeOptions =
     opsType === OpsType.ENABLE_FEATURE.toString()
       ? [clauseTypeOptionDatetime, clauseTypeOptionWebhook]
@@ -431,6 +450,16 @@ export const ClauseInput: FC<ClauseInputProps> = ({
     control,
     name: `${clauseName}.clauseType`,
   });
+
+  useEffect(() => {
+    dispatch(
+      listWebhooks({
+        environmentNamespace: currentEnvironment.namespace,
+        pageSize: WEBHOOK_LIST_PAGE_SIZE,
+        cursor: String(0),
+      })
+    );
+  }, []);
 
   return (
     <div className="grid grid-cols-1 gap-2">
