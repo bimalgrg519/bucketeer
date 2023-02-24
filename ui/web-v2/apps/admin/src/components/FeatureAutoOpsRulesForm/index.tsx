@@ -412,10 +412,8 @@ export const ClauseInput: FC<ClauseInputProps> = ({
   ruleIdx,
   clauseIdx,
 }) => {
-  const dispatch = useDispatch<AppDispatch>();
   const editable = useIsEditable();
   const methods = useFormContext();
-  const currentEnvironment = useCurrentEnvironment();
 
   const {
     control,
@@ -427,16 +425,6 @@ export const ClauseInput: FC<ClauseInputProps> = ({
     control,
     name: `${ruleName}.opsType`,
   });
-  const webhookList = useSelector<AppState, Webhook.AsObject[]>(
-    (state) => selectAll(state.webhook),
-    shallowEqual
-  );
-  const isLoading = useSelector<AppState, boolean>(
-    (state) => state.webhook.loading,
-    shallowEqual
-  );
-
-  console.log('webhook', webhookList);
 
   const selectedClauseTypeOptions =
     opsType === OpsType.ENABLE_FEATURE.toString()
@@ -450,16 +438,6 @@ export const ClauseInput: FC<ClauseInputProps> = ({
     control,
     name: `${clauseName}.clauseType`,
   });
-
-  useEffect(() => {
-    dispatch(
-      listWebhooks({
-        environmentNamespace: currentEnvironment.namespace,
-        pageSize: WEBHOOK_LIST_PAGE_SIZE,
-        cursor: String(0),
-      })
-    );
-  }, []);
 
   return (
     <div className="grid grid-cols-1 gap-2">
@@ -487,6 +465,9 @@ export const ClauseInput: FC<ClauseInputProps> = ({
         )}
         {clauseType === ClauseType.DATETIME.toString() && (
           <DatetimeClauseInput ruleIdx={ruleIdx} clauseIdx={clauseIdx} />
+        )}
+        {clauseType === ClauseType.WEBHOOK.toString() && (
+          <WebhookClauseInput ruleIdx={ruleIdx} clauseIdx={clauseIdx} />
         )}
       </div>
     </div>
@@ -707,6 +688,90 @@ export const DatetimeClauseInput: FC<DatetimeClauseInputProps> = memo(
             {f(messages.autoOps.datetimeClause.datetime)}
           </span>
         </label>
+        <DatetimePicker
+          name={`${clauseName}.datetimeClause.time`}
+          disabled={!editable}
+        />
+        <p className="input-error">
+          {errors.autoOpsRules?.[ruleIdx]?.clauses?.[clauseIdx]?.datetimeClause
+            ?.time?.message && (
+            <span role="alert">
+              {
+                errors.autoOpsRules?.[ruleIdx]?.clauses?.[clauseIdx]
+                  ?.datetimeClause?.time?.message
+              }
+            </span>
+          )}
+        </p>
+      </div>
+    );
+  }
+);
+
+export interface WebhookClauseInputProps {
+  ruleIdx: number;
+  clauseIdx: number;
+}
+
+export const WebhookClauseInput: FC<WebhookClauseInputProps> = memo(
+  ({ ruleIdx, clauseIdx }) => {
+    const dispatch = useDispatch<AppDispatch>();
+    const editable = useIsEditable();
+    const { formatMessage: f } = useIntl();
+    const methods = useFormContext();
+    const clauseName = `autoOpsRules.${ruleIdx}.clauses.${clauseIdx}`;
+    const currentEnvironment = useCurrentEnvironment();
+
+    const {
+      formState: { errors },
+    } = methods;
+
+    const webhookList = useSelector<AppState, Webhook.AsObject[]>(
+      (state) => selectAll(state.webhook),
+      shallowEqual
+    );
+    const isLoading = useSelector<AppState, boolean>(
+      (state) => state.webhook.loading,
+      shallowEqual
+    );
+
+    useEffect(() => {
+      dispatch(
+        listWebhooks({
+          environmentNamespace: currentEnvironment.namespace,
+          pageSize: WEBHOOK_LIST_PAGE_SIZE,
+          cursor: String(0),
+        })
+      );
+    }, []);
+
+    return (
+      <div className="">
+        <label htmlFor="name">
+          <span className="input-label">
+            {f(messages.autoOps.datetimeClause.datetime)}
+          </span>
+        </label>
+        {/* <Controller
+              name={clauseType}
+              control={control}
+              render={({ field }) => (
+                <Select
+                  onChange={(e) => {
+                    if (e.value === field.value) {
+                      return;
+                    }
+                    handleChangeType(clauseIdx, e.value);
+                    field.onChange(e.value);
+                  }}
+                  className={classNames('flex-none w-[200px]')}
+                  options={clauseTypeOptions}
+                  disabled={!editable}
+                  isSearchable={false}
+                  value={clauseTypeOptions.find((o) => o.value == c.type)}
+                />
+              )}
+            /> */}
         <DatetimePicker
           name={`${clauseName}.datetimeClause.time`}
           disabled={!editable}

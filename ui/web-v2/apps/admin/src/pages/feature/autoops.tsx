@@ -34,6 +34,7 @@ import { AutoOpsRule, OpsType } from '../../proto/autoops/auto_ops_rule_pb';
 import {
   DatetimeClause,
   OpsEventRateClause,
+  WebhookClause,
 } from '../../proto/autoops/clause_pb';
 import {
   AddDatetimeClauseCommand,
@@ -292,6 +293,7 @@ export function createCreateAutoOpsRuleCommands(
         command.setOpsType(OpsType.DISABLE_FEATURE);
       command.setOpsEventRateClausesList(createOpsEventRateClauses(r.clauses));
       command.setDatetimeClausesList(createDatetimeClauses(r.clauses));
+      command.setWebhookClausesList(createWebhookClauses(r.clauses));
       commands.push(command);
     });
   return commands;
@@ -347,6 +349,17 @@ export function createOpsEventRateOperator(
 
 export function createDatetimeClauses(val: ClauseSchema[]): DatetimeClause[] {
   const clauses: Array<DatetimeClause> = [];
+  val.forEach((c) => {
+    if (c.clauseType === ClauseType.DATETIME.toString()) {
+      const clause = createDatetimeClause(c.datetimeClause);
+      clauses.push(clause);
+    }
+  });
+  return clauses;
+}
+
+export function createWebhookClauses(val: ClauseSchema[]): WebhookClause[] {
+  const clauses: Array<WebhookClause> = [];
   val.forEach((c) => {
     if (c.clauseType === ClauseType.DATETIME.toString()) {
       const clause = createDatetimeClause(c.datetimeClause);
