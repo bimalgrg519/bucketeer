@@ -22,7 +22,10 @@ import { selectAll as selectAllGoals } from '../../modules/goals';
 import { useIsEditable, useCurrentEnvironment } from '../../modules/me';
 import { selectAll } from '../../modules/webhooks';
 import { OpsType, OpsTypeMap } from '../../proto/autoops/auto_ops_rule_pb';
-import { OpsEventRateClause } from '../../proto/autoops/clause_pb';
+import {
+  OpsEventRateClause,
+  WebhookClause,
+} from '../../proto/autoops/clause_pb';
 import { Goal } from '../../proto/experiment/goal_pb';
 import { Feature } from '../../proto/feature/feature_pb';
 import { AppDispatch } from '../../store';
@@ -114,6 +117,23 @@ export const createInitialOpsEventRateClause = (feature: Feature.AsObject) => {
   };
 };
 
+export const createInitialWebhookClause = () => {
+  return {
+    id: uuid(),
+    webhookId: '',
+    conditionsList: [createInitialConditionsList()],
+  };
+};
+
+export const createInitialConditionsList = () => {
+  return {
+    id: uuid(),
+    filter: '',
+    operator: webhookOperatorOptions[0].value,
+    value: '',
+  };
+};
+
 export const createInitialDatetimeClause = () => {
   const date = new Date();
   date.setDate(date.getDate() + 1);
@@ -128,6 +148,7 @@ export const createInitialClause = (feature: Feature.AsObject) => {
     clauseType: ClauseType.DATETIME.toString(),
     datetimeClause: createInitialDatetimeClause(),
     opsEventRateClause: createInitialOpsEventRateClause(feature),
+    webhookClause: createInitialWebhookClause(),
   };
 };
 
@@ -276,6 +297,8 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
     selectFeatureById(state.features, featureId),
     state.features.getFeatureError,
   ]);
+  const dispatch = useDispatch<AppDispatch>();
+  const currentEnvironment = useCurrentEnvironment();
   const { formatMessage: f } = useIntl();
   const methods = useFormContext();
   const {
@@ -283,7 +306,8 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
     formState: { errors },
     watch,
   } = methods;
-  const clausesName = `autoOpsRules.${ruleIdx}.clauses`;
+  const ruleName = `autoOpsRules.${ruleIdx}`;
+  const clausesName = `${ruleName}.clauses`;
   const watchClauses = useWatch({
     control,
     name: clausesName,
@@ -295,6 +319,10 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
   } = useFieldArray({
     control,
     name: clausesName,
+  });
+  const opsType = useWatch({
+    control,
+    name: `${ruleName}.opsType`,
   });
 
   const handleAdd = useCallback(() => {
@@ -308,9 +336,122 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
     [remove]
   );
 
+  const selectedClauseTypeOptions =
+    opsType === OpsType.ENABLE_FEATURE.toString()
+      ? [clauseTypeOptionDatetime, clauseTypeOptionWebhook]
+      : [
+          clauseTypeOptionEventRate,
+          clauseTypeOptionWebhook,
+          clauseTypeOptionDatetime,
+        ];
+
+  const webhookList = useSelector<AppState, Webhook.AsObject[]>(
+    (state) => selectAll(state.webhook),
+    shallowEqual
+  );
+  const isLoading = useSelector<AppState, boolean>(
+    (state) => state.webhook.loading,
+    shallowEqual
+  );
+
+  useEffect(() => {
+    dispatch(
+      listWebhooks({
+        environmentNamespace: currentEnvironment.namespace,
+        pageSize: WEBHOOK_LIST_PAGE_SIZE,
+        cursor: String(0),
+      })
+    );
+  }, []);
+
+  const webhookListOptions = webhookList.map((webhook) => ({
+    label: webhook.name,
+    value: webhook.id,
+  }));
+
   return (
     <div>
       {clauses.map((clause: any, clauseIdx: number) => {
+        const { webhookId } = clause.webhookClause;
+        if (clause.clauseType === ClauseType.WEBHOOK.toString()) {
+          const clauseName = `${clausesName}.${clauseIdx}`;
+          const clauseType = `${clausesName}.${clauseIdx}.clauseType`;
+          const webhookClause = `${clauseName}.webhookClause`;
+
+          return (
+            <div key={clause.id}>
+              <div className={classNames('flex space-x-2')}>
+                <div className="w-[2rem] flex justify-center items-center">
+                  {clauseIdx === 0 ? (
+                    <div
+                      className={classNames(
+                        'py-1 px-2',
+                        'text-xs bg-gray-400 text-white rounded-full'
+                      )}
+                    >
+                      IF
+                    </div>
+                  ) : (
+                    <div className="p-1 text-xs">AND</div>
+                  )}
+                </div>
+                <div className="flex-grow flex mt-3 p-3 rounded-md border">
+                  <div className="flex-grow">
+                    <Controller
+                      name={clauseType}
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onChange={(o: Option) => field.onChange(o.value)}
+                          options={selectedClauseTypeOptions}
+                          disabled={!editable}
+                          value={selectedClauseTypeOptions.find(
+                            (o) => o.value === clause.clauseType
+                          )}
+                        />
+                      )}
+                    />
+                    <div>
+                      <label htmlFor="webhookName">
+                        <span className="input-label">
+                          {f(messages.autoOps.webhookClause.webhookName)}
+                        </span>
+                      </label>
+                      <Controller
+                        name={`${webhookClause}.webhookId`}
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            onChange={(o: Option) => field.onChange(o.value)}
+                            options={webhookListOptions}
+                            disabled={!editable}
+                            value={webhookListOptions.find(
+                              (o) => o.value === webhookId
+                            )}
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
+                  {editable && (
+                    <div className="flex items-start pl-2">
+                      <button
+                        type="button"
+                        className="x-icon"
+                        onClick={() => handleRemove(clauseIdx)}
+                      >
+                        <XIcon className="w-5 h-5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="pl-10">
+                <WebhookClauseInput ruleIdx={ruleIdx} clauseIdx={clauseIdx} />
+              </div>
+            </div>
+          );
+        }
         return (
           <div key={clause.id}>
             <div className={classNames('flex space-x-2')}>
@@ -481,6 +622,33 @@ export const operatorOptions = [
   },
   {
     value: OpsEventRateClause.Operator.LESS_OR_EQUAL.toString(),
+    label: intl.formatMessage(messages.feature.clause.operator.lessOrEqual),
+  },
+];
+
+export const webhookOperatorOptions = [
+  {
+    value: WebhookClause.Condition.Operator.EQUAL.toString(),
+    label: intl.formatMessage(messages.feature.clause.operator.equal),
+  },
+  {
+    value: WebhookClause.Condition.Operator.NOT_EQUAL.toString(),
+    label: intl.formatMessage(messages.feature.clause.operator.notEqual),
+  },
+  {
+    value: WebhookClause.Condition.Operator.MORE_THAN.toString(),
+    label: intl.formatMessage(messages.feature.clause.operator.greater),
+  },
+  {
+    value: WebhookClause.Condition.Operator.MORE_THAN_OR_EQUAL.toString(),
+    label: intl.formatMessage(messages.feature.clause.operator.greaterOrEqual),
+  },
+  {
+    value: WebhookClause.Condition.Operator.LESS_THAN.toString(),
+    label: intl.formatMessage(messages.feature.clause.operator.less),
+  },
+  {
+    value: WebhookClause.Condition.Operator.LESS_THAN_OR_EQUAL.toString(),
     label: intl.formatMessage(messages.feature.clause.operator.lessOrEqual),
   },
 ];
@@ -719,12 +887,25 @@ export const WebhookClauseInput: FC<WebhookClauseInputProps> = memo(
     const editable = useIsEditable();
     const { formatMessage: f } = useIntl();
     const methods = useFormContext();
-    const clauseName = `autoOpsRules.${ruleIdx}.clauses.${clauseIdx}`;
+    const webhookClauseName = `autoOpsRules.${ruleIdx}.clauses.${clauseIdx}.webhookClause`;
+    const webhookConditionsListClauseName = `${webhookClauseName}.conditionsList`;
     const currentEnvironment = useCurrentEnvironment();
 
     const {
+      register,
+      control,
       formState: { errors },
     } = methods;
+
+    const webhookClause = useWatch({
+      control,
+      name: webhookClauseName,
+    });
+
+    const webhookConditionsListClause = useWatch({
+      control,
+      name: webhookConditionsListClauseName,
+    });
 
     const webhookList = useSelector<AppState, Webhook.AsObject[]>(
       (state) => selectAll(state.webhook),
@@ -745,48 +926,108 @@ export const WebhookClauseInput: FC<WebhookClauseInputProps> = memo(
       );
     }, []);
 
+    const webhookListOptions = webhookList.map((webhook) => ({
+      label: webhook.name,
+      value: webhook.id,
+    }));
+
     return (
       <div className="">
-        <label htmlFor="name">
-          <span className="input-label">
-            {f(messages.autoOps.datetimeClause.datetime)}
-          </span>
-        </label>
-        {/* <Controller
-              name={clauseType}
-              control={control}
-              render={({ field }) => (
-                <Select
-                  onChange={(e) => {
-                    if (e.value === field.value) {
-                      return;
-                    }
-                    handleChangeType(clauseIdx, e.value);
-                    field.onChange(e.value);
-                  }}
-                  className={classNames('flex-none w-[200px]')}
-                  options={clauseTypeOptions}
-                  disabled={!editable}
-                  isSearchable={false}
-                  value={clauseTypeOptions.find((o) => o.value == c.type)}
-                />
+        {webhookConditionsListClause.map((condition, conditionIdx) => (
+          <div key={condition.id} className="flex space-x-2 mt-2">
+            <div
+              className={classNames(
+                'py-1 px-2',
+                'text-xs bg-gray-400 text-white rounded-full self-center'
               )}
-            /> */}
-        <DatetimePicker
-          name={`${clauseName}.datetimeClause.time`}
-          disabled={!editable}
-        />
-        <p className="input-error">
-          {errors.autoOpsRules?.[ruleIdx]?.clauses?.[clauseIdx]?.datetimeClause
-            ?.time?.message && (
-            <span role="alert">
-              {
-                errors.autoOpsRules?.[ruleIdx]?.clauses?.[clauseIdx]
-                  ?.datetimeClause?.time?.message
-              }
-            </span>
-          )}
-        </p>
+            >
+              WHERE
+            </div>
+            <div className="flex-grow flex mt-3 p-3 rounded-md border">
+              <div className="flex-grow space-y-2">
+                <div>
+                  <input
+                    {...register(
+                      `${webhookConditionsListClauseName}.${conditionIdx}.filter`
+                    )}
+                    type="text"
+                    placeholder={intl.formatMessage(
+                      messages.autoOps.webhookClause.filter
+                    )}
+                    defaultValue={condition.filter}
+                    className={classNames('input-text w-full')}
+                    disabled={!editable}
+                  />
+                  <p className="input-error">
+                    {errors.autoOpsRules?.[ruleIdx]?.clauses?.[clauseIdx]
+                      ?.webhookClause?.conditionsList[conditionIdx].filter
+                      ?.message && (
+                      <span role="alert">
+                        {
+                          errors.autoOpsRules?.[ruleIdx]?.clauses?.[clauseIdx]
+                            ?.webhookClause?.conditionsList[conditionIdx].filter
+                            ?.message
+                        }
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <Controller
+                  name={`${webhookConditionsListClauseName}.${conditionIdx}.operator`}
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      onChange={(o: Option) => field.onChange(o.value)}
+                      options={webhookOperatorOptions}
+                      disabled={!editable}
+                      value={webhookOperatorOptions.find(
+                        (o) => o.value === condition.operator
+                      )}
+                    />
+                  )}
+                />
+                <div>
+                  <input
+                    {...register(
+                      `${webhookConditionsListClauseName}.${conditionIdx}.value`
+                    )}
+                    type="text"
+                    defaultValue={condition.value}
+                    className={classNames('input-text w-full')}
+                    disabled={!editable}
+                    placeholder={intl.formatMessage(
+                      messages.autoOps.webhookClause.value
+                    )}
+                  />
+                  <p className="input-error">
+                    {errors.autoOpsRules?.[ruleIdx]?.clauses?.[clauseIdx]
+                      ?.webhookClause?.conditionsList[conditionIdx].value
+                      ?.message && (
+                      <span role="alert">
+                        {
+                          errors.autoOpsRules?.[ruleIdx]?.clauses?.[clauseIdx]
+                            ?.webhookClause?.conditionsList[conditionIdx].value
+                            ?.message
+                        }
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              {editable && (
+                <div className="flex items-start pl-2">
+                  <button
+                    type="button"
+                    className="x-icon"
+                    // onClick={() => handleRemove(clauseIdx)}
+                  >
+                    <XIcon className="w-5 h-5" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

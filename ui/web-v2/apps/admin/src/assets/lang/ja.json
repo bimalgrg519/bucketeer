@@ -203,6 +203,7 @@
   "feature.clause.operator.in": "次の値を含む",
   "feature.clause.operator.less": "<",
   "feature.clause.operator.lessOrEqual": "<=",
+  "feature.clause.operator.notEqual": "!=",
   "feature.clause.operator.segment": "次のセグメントに含まれる",
   "feature.clause.operator.startWith": "次の値で始まる",
   "feature.clause.type.compare": "比較",

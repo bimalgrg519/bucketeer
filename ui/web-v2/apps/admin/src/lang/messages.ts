@@ -386,6 +386,20 @@ export const messages = {
         defaultMessage: 'Goal',
       }),
     },
+    webhookClause: {
+      webhookName: defineMessage({
+        id: 'autoOps.webhookClause.webhookName',
+        defaultMessage: 'Webhhok Name',
+      }),
+      filter: defineMessage({
+        id: 'autoOps.webhookClause.filter',
+        defaultMessage: 'Filter',
+      }),
+      value: defineMessage({
+        id: 'autoOps.webhookClause.value',
+        defaultMessage: 'Value',
+      }),
+    },
     datetimeClause: {
       datetime: defineMessage({
         id: 'autoOps.datetime.datetime',
@@ -1196,6 +1210,10 @@ export const messages = {
         equal: defineMessage({
           id: 'feature.clause.operator.equal',
           defaultMessage: '=',
+        }),
+        notEqual: defineMessage({
+          id: 'feature.clause.operator.notEqual',
+          defaultMessage: '!=',
         }),
         greaterOrEqual: defineMessage({
           id: 'feature.clause.operator.greaterOrEqual',

@@ -4,6 +4,7 @@ import React, { FC, memo, useCallback, useEffect, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useDispatch, useSelector, shallowEqual } from 'react-redux';
 import { useParams, useHistory } from 'react-router-dom';
+import { v4 as uuid } from 'uuid';
 import * as yup from 'yup';
 
 import { DetailSkeleton } from '../../components/DetailSkeleton';
@@ -11,6 +12,7 @@ import {
   ClauseType,
   createInitialDatetimeClause,
   createInitialOpsEventRateClause,
+  createInitialWebhookClause,
   FeatureAutoOpsRulesForm,
 } from '../../components/FeatureAutoOpsRulesForm';
 import {
@@ -109,7 +111,27 @@ export const FeatureAutoOpsPage: FC<FeatureAutoOpsPageProps> = memo(
                   threadsholdRate: opsEventRateClause.threadsholdRate * 100,
                   operator: opsEventRateClause.operator.toString(),
                 },
+                webhookClause: createInitialWebhookClause(),
                 datetimeClause: createInitialDatetimeClause(),
+              };
+            }
+            if (type === ClauseType.WEBHOOK) {
+              const webhookClause = WebhookClause.deserializeBinary(
+                clause.clause.value as Uint8Array
+              ).toObject();
+              return {
+                id: clause.id,
+                clauseType: ClauseType.WEBHOOK.toString(),
+                webhookClause: {
+                  webhookId: webhookClause.webhookId,
+                  conditionsList: webhookClause.conditionsList.map((cond) => ({
+                    ...cond,
+                    id: uuid(),
+                    operator: cond.operator.toString(),
+                  })),
+                },
+                datetimeClause: createInitialDatetimeClause(),
+                opsEventRateClause: createInitialOpsEventRateClause(feature),
               };
             }
             if (type === ClauseType.DATETIME) {
@@ -122,6 +144,7 @@ export const FeatureAutoOpsPage: FC<FeatureAutoOpsPageProps> = memo(
                 datetimeClause: {
                   time: new Date(datetimeClause.time * 1000),
                 },
+                webhookClause: createInitialWebhookClause(),
                 opsEventRateClause: createInitialOpsEventRateClause(feature),
               };
             }
@@ -129,6 +152,9 @@ export const FeatureAutoOpsPage: FC<FeatureAutoOpsPageProps> = memo(
         };
       }),
     };
+
+    console.log('defaultValues', defaultValues);
+
     const methods = useForm({
       resolver: yupResolver(autoOpsRulesFormSchema),
       defaultValues: defaultValues,
@@ -138,6 +164,7 @@ export const FeatureAutoOpsPage: FC<FeatureAutoOpsPageProps> = memo(
 
     const handleUpdate = useCallback(
       async (data) => {
+        console.log('data', data);
         const createAutoOpsRuleCommands = createCreateAutoOpsRuleCommands(
           defaultValues.autoOpsRules,
           data.autoOpsRules
@@ -257,6 +284,11 @@ interface OpsEventRateClauseSchema {
   operator: string;
 }
 
+interface WebhookClauseSchema {
+  webhookId: string;
+  conditionsList: Array<WebhookClause.Condition.AsObject>;
+}
+
 interface DatetimeClauseSchema {
   time: Date;
 }
@@ -266,6 +298,7 @@ interface ClauseSchema {
   clauseType: string;
   opsEventRateClause?: OpsEventRateClauseSchema;
   datetimeClause?: DatetimeClauseSchema;
+  webhookClause?: WebhookClauseSchema;
 }
 
 interface AutoOpsRuleSchema {
@@ -358,23 +391,52 @@ export function createDatetimeClauses(val: ClauseSchema[]): DatetimeClause[] {
   return clauses;
 }
 
-export function createWebhookClauses(val: ClauseSchema[]): WebhookClause[] {
-  const clauses: Array<WebhookClause> = [];
-  val.forEach((c) => {
-    if (c.clauseType === ClauseType.DATETIME.toString()) {
-      const clause = createDatetimeClause(c.datetimeClause);
-      clauses.push(clause);
-    }
-  });
-  return clauses;
-}
-
 export function createDatetimeClause(
   dtc: DatetimeClauseSchema
 ): DatetimeClause {
   const clause = new DatetimeClause();
   clause.setTime(Math.round(dtc.time.getTime() / 1000));
   return clause;
+}
+
+export function createWebhookClauses(val: ClauseSchema[]): WebhookClause[] {
+  const clauses: Array<WebhookClause> = [];
+  val.forEach((c) => {
+    if (c.clauseType === ClauseType.WEBHOOK.toString()) {
+      const clause = createWebhookClause(c.webhookClause);
+      clauses.push(clause);
+    }
+  });
+  return clauses;
+}
+
+export function createWebhookClause(whc: WebhookClauseSchema): WebhookClause {
+  const clause = new WebhookClause();
+  clause.setWebhookId(whc.webhookId);
+  clause.setConditionsList(createConditionsList(whc.conditionsList));
+  return clause;
+}
+
+export function createConditionsList(
+  conditionsList: Array<WebhookClause.Condition.AsObject>
+): Array<WebhookClause.Condition> {
+  const conditions: Array<WebhookClause.Condition> = [];
+
+  conditionsList.forEach((condition) => {
+    conditions.push(createCondition(condition));
+  });
+  return conditions;
+}
+
+export function createCondition(
+  condition: WebhookClause.Condition.AsObject
+): WebhookClause.Condition {
+  const conditionClause = new WebhookClause.Condition();
+
+  conditionClause.setFilter(condition.filter);
+  conditionClause.setValue(condition.value);
+  conditionClause.setOperator(condition.operator);
+  return conditionClause;
 }
 
 export function createChangeAutoOpsRuleOpsTypeCommand(
