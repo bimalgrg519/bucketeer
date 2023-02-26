@@ -312,11 +312,11 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
     control,
     name: clausesName,
   });
-  const {
-    fields: clauses,
-    append,
-    remove,
-  } = useFieldArray({
+  const { append, remove } = useFieldArray({
+    control,
+    name: clausesName,
+  });
+  const clauses = useWatch({
     control,
     name: clausesName,
   });
@@ -607,9 +607,9 @@ export const ClauseInput: FC<ClauseInputProps> = ({
         {clauseType === ClauseType.DATETIME.toString() && (
           <DatetimeClauseInput ruleIdx={ruleIdx} clauseIdx={clauseIdx} />
         )}
-        {clauseType === ClauseType.WEBHOOK.toString() && (
+        {/* {clauseType === ClauseType.WEBHOOK.toString() && (
           <WebhookClauseInput ruleIdx={ruleIdx} clauseIdx={clauseIdx} />
-        )}
+        )} */}
       </div>
     </div>
   );
