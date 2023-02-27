@@ -347,27 +347,23 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
   return (
     <div>
       {clauses.map((clause: any, clauseIdx: number) => {
-        const isWebhookType =
-          clause.clauseType === ClauseType.WEBHOOK.toString();
         return (
           <div key={clause.id}>
             <div className={classNames('flex space-x-2')}>
-              {!isWebhookType && (
-                <div className="w-[2rem] flex justify-center items-center">
-                  {clauseIdx === 0 ? (
-                    <div
-                      className={classNames(
-                        'py-1 px-2',
-                        'text-xs bg-gray-400 text-white rounded-full'
-                      )}
-                    >
-                      IF
-                    </div>
-                  ) : (
-                    <div className="p-1 text-xs">OR</div>
-                  )}
-                </div>
-              )}
+              <div className="w-[2rem] flex justify-center items-center">
+                {clauseIdx === 0 ? (
+                  <div
+                    className={classNames(
+                      'py-1 px-2',
+                      'text-xs bg-gray-400 text-white rounded-full'
+                    )}
+                  >
+                    IF
+                  </div>
+                ) : (
+                  <div className="p-1 text-xs">OR</div>
+                )}
+              </div>
               <div className="flex-grow flex mt-3 p-3 rounded-md border">
                 <div className="flex-grow">
                   <ClauseInput
@@ -569,7 +565,7 @@ export const ClauseInput: FC<ClauseInputProps> = ({
                 </span>
               </label>
               <Controller
-                name={`${clause.webhookClause}.webhookId`}
+                name={`${clauseName}.webhookClause.webhookId`}
                 control={control}
                 render={({ field }) => (
                   <Select
@@ -921,13 +917,15 @@ export const WebhookClauseInput: FC<WebhookClauseInputProps> = memo(
       <div className="">
         {conditionsList.map((condition: any, conditionIdx) => (
           <div key={condition.id} className="flex space-x-2 mt-2">
-            <div
-              className={classNames(
-                'py-1 px-2',
-                'text-xs bg-gray-400 text-white rounded-full self-center'
-              )}
-            >
-              WHERE
+            <div className="w-14 self-center flex justify-center">
+              <div
+                className={classNames(
+                  'py-1 px-2',
+                  'text-xs bg-gray-400 text-white rounded-full'
+                )}
+              >
+                {conditionIdx === 0 ? 'WHERE' : 'AND'}
+              </div>
             </div>
             <div className="flex-grow flex mt-3 p-3 rounded-md border">
               <div className="flex-grow space-y-2">
