@@ -297,8 +297,7 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
     selectFeatureById(state.features, featureId),
     state.features.getFeatureError,
   ]);
-  const dispatch = useDispatch<AppDispatch>();
-  const currentEnvironment = useCurrentEnvironment();
+
   const { formatMessage: f } = useIntl();
   const methods = useFormContext();
   const {
@@ -312,11 +311,11 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
     control,
     name: clausesName,
   });
-  const { append, remove } = useFieldArray({
-    control,
-    name: clausesName,
-  });
-  const clauses = useWatch({
+  const {
+    append,
+    remove,
+    fields: clauses,
+  } = useFieldArray({
     control,
     name: clausesName,
   });
@@ -325,7 +324,7 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
     name: `${ruleName}.opsType`,
   });
 
-  const handleAdd = useCallback(() => {
+  const handleAddCondition = useCallback(() => {
     append(createInitialClause(feature));
   }, [append]);
 
@@ -345,42 +344,15 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
           clauseTypeOptionDatetime,
         ];
 
-  const webhookList = useSelector<AppState, Webhook.AsObject[]>(
-    (state) => selectAll(state.webhook),
-    shallowEqual
-  );
-  const isLoading = useSelector<AppState, boolean>(
-    (state) => state.webhook.loading,
-    shallowEqual
-  );
-
-  useEffect(() => {
-    dispatch(
-      listWebhooks({
-        environmentNamespace: currentEnvironment.namespace,
-        pageSize: WEBHOOK_LIST_PAGE_SIZE,
-        cursor: String(0),
-      })
-    );
-  }, []);
-
-  const webhookListOptions = webhookList.map((webhook) => ({
-    label: webhook.name,
-    value: webhook.id,
-  }));
-
   return (
     <div>
       {clauses.map((clause: any, clauseIdx: number) => {
-        const { webhookId } = clause.webhookClause;
-        if (clause.clauseType === ClauseType.WEBHOOK.toString()) {
-          const clauseName = `${clausesName}.${clauseIdx}`;
-          const clauseType = `${clausesName}.${clauseIdx}.clauseType`;
-          const webhookClause = `${clauseName}.webhookClause`;
-
-          return (
-            <div key={clause.id}>
-              <div className={classNames('flex space-x-2')}>
+        const isWebhookType =
+          clause.clauseType === ClauseType.WEBHOOK.toString();
+        return (
+          <div key={clause.id}>
+            <div className={classNames('flex space-x-2')}>
+              {!isWebhookType && (
                 <div className="w-[2rem] flex justify-center items-center">
                   {clauseIdx === 0 ? (
                     <div
@@ -392,89 +364,17 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
                       IF
                     </div>
                   ) : (
-                    <div className="p-1 text-xs">AND</div>
+                    <div className="p-1 text-xs">OR</div>
                   )}
                 </div>
-                <div className="flex-grow flex mt-3 p-3 rounded-md border">
-                  <div className="flex-grow">
-                    <Controller
-                      name={clauseType}
-                      control={control}
-                      render={({ field }) => (
-                        <Select
-                          onChange={(o: Option) => field.onChange(o.value)}
-                          options={selectedClauseTypeOptions}
-                          disabled={!editable}
-                          value={selectedClauseTypeOptions.find(
-                            (o) => o.value === clause.clauseType
-                          )}
-                        />
-                      )}
-                    />
-                    <div>
-                      <label htmlFor="webhookName">
-                        <span className="input-label">
-                          {f(messages.autoOps.webhookClause.webhookName)}
-                        </span>
-                      </label>
-                      <Controller
-                        name={`${webhookClause}.webhookId`}
-                        control={control}
-                        render={({ field }) => (
-                          <Select
-                            onChange={(o: Option) => field.onChange(o.value)}
-                            options={webhookListOptions}
-                            disabled={!editable}
-                            value={webhookListOptions.find(
-                              (o) => o.value === webhookId
-                            )}
-                          />
-                        )}
-                      />
-                    </div>
-                  </div>
-                  {editable && (
-                    <div className="flex items-start pl-2">
-                      <button
-                        type="button"
-                        className="x-icon"
-                        onClick={() => handleRemove(clauseIdx)}
-                      >
-                        <XIcon className="w-5 h-5" aria-hidden="true" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="pl-10">
-                <WebhookClauseInput ruleIdx={ruleIdx} clauseIdx={clauseIdx} />
-              </div>
-            </div>
-          );
-        }
-        return (
-          <div key={clause.id}>
-            <div className={classNames('flex space-x-2')}>
-              <div className="w-[2rem] flex justify-center items-center">
-                {clauseIdx === 0 ? (
-                  <div
-                    className={classNames(
-                      'py-1 px-2',
-                      'text-xs bg-gray-400 text-white rounded-full'
-                    )}
-                  >
-                    IF
-                  </div>
-                ) : (
-                  <div className="p-1 text-xs">OR</div>
-                )}
-              </div>
+              )}
               <div className="flex-grow flex mt-3 p-3 rounded-md border">
                 <div className="flex-grow">
                   <ClauseInput
                     featureId={featureId}
                     ruleIdx={ruleIdx}
                     clauseIdx={clauseIdx}
+                    feature={feature}
                   />
                 </div>
                 {editable && (
@@ -493,9 +393,13 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
           </div>
         );
       })}
-      {editable && !containsDatetimeClause(watchClauses) && (
+      {editable && !hideAddConditionBtn(watchClauses) && (
         <div className="py-4 flex">
-          <button type="button" className="btn-submit" onClick={handleAdd}>
+          <button
+            type="button"
+            className="btn-submit"
+            onClick={handleAddCondition}
+          >
             {f(messages.button.addCondition)}
           </button>
         </div>
@@ -504,9 +408,11 @@ export const ClausesInput: FC<ClausesInputProps> = ({ featureId, ruleIdx }) => {
   );
 };
 
-function containsDatetimeClause(clauses): boolean {
+function hideAddConditionBtn(clauses): boolean {
   for (const clause of clauses) {
     if (clause.clauseType === ClauseType.DATETIME.toString()) {
+      return true;
+    } else if (clause.clauseType === ClauseType.WEBHOOK.toString()) {
       return true;
     }
   }
@@ -546,19 +452,25 @@ export interface ClauseInputProps {
   featureId: string;
   ruleIdx: number;
   clauseIdx: number;
+  feature: Feature.AsObject;
 }
 
 export const ClauseInput: FC<ClauseInputProps> = ({
   featureId,
   ruleIdx,
   clauseIdx,
+  feature,
 }) => {
   const editable = useIsEditable();
   const methods = useFormContext();
+  const { formatMessage: f } = useIntl();
+  const dispatch = useDispatch<AppDispatch>();
+  const currentEnvironment = useCurrentEnvironment();
 
   const {
     control,
     formState: { errors },
+    setValue,
   } = methods;
   const ruleName = `autoOpsRules.${ruleIdx}`;
   const clauseName = `${ruleName}.clauses.${clauseIdx}`;
@@ -575,10 +487,39 @@ export const ClauseInput: FC<ClauseInputProps> = ({
           clauseTypeOptionWebhook,
           clauseTypeOptionDatetime,
         ];
+
   const clauseType = useWatch({
     control,
     name: `${clauseName}.clauseType`,
   });
+  const clause = useWatch({
+    control,
+    name: clauseName,
+  });
+
+  const webhookList = useSelector<AppState, Webhook.AsObject[]>(
+    (state) => selectAll(state.webhook),
+    shallowEqual
+  );
+  const isLoading = useSelector<AppState, boolean>(
+    (state) => state.webhook.loading,
+    shallowEqual
+  );
+
+  useEffect(() => {
+    dispatch(
+      listWebhooks({
+        environmentNamespace: currentEnvironment.namespace,
+        pageSize: WEBHOOK_LIST_PAGE_SIZE,
+        cursor: String(0),
+      })
+    );
+  }, []);
+
+  const webhookListOptions = webhookList.map((webhook) => ({
+    label: webhook.name,
+    value: webhook.id,
+  }));
 
   return (
     <div className="grid grid-cols-1 gap-2">
@@ -588,7 +529,19 @@ export const ClauseInput: FC<ClauseInputProps> = ({
           control={control}
           render={({ field }) => (
             <Select
-              onChange={(o: Option) => field.onChange(o.value)}
+              onChange={(o: Option) => {
+                setValue(`${ruleName}.clauses`, [
+                  {
+                    id: uuid(),
+                    clauseType: o.value.toString(),
+                    datetimeClause: createInitialDatetimeClause(),
+                    opsEventRateClause:
+                      createInitialOpsEventRateClause(feature),
+                    webhookClause: createInitialWebhookClause(),
+                  },
+                ]);
+                field.onChange(o.value);
+              }}
               options={selectedClauseTypeOptions}
               disabled={!editable}
               value={selectedClauseTypeOptions.find(
@@ -607,9 +560,32 @@ export const ClauseInput: FC<ClauseInputProps> = ({
         {clauseType === ClauseType.DATETIME.toString() && (
           <DatetimeClauseInput ruleIdx={ruleIdx} clauseIdx={clauseIdx} />
         )}
-        {/* {clauseType === ClauseType.WEBHOOK.toString() && (
-          <WebhookClauseInput ruleIdx={ruleIdx} clauseIdx={clauseIdx} />
-        )} */}
+        {clauseType === ClauseType.WEBHOOK.toString() && (
+          <div>
+            <div>
+              <label htmlFor="webhookName">
+                <span className="input-label">
+                  {f(messages.autoOps.webhookClause.webhookName)}
+                </span>
+              </label>
+              <Controller
+                name={`${clause.webhookClause}.webhookId`}
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    onChange={(o: Option) => field.onChange(o.value)}
+                    options={webhookListOptions}
+                    disabled={!editable}
+                    value={webhookListOptions.find(
+                      (o) => o.value === clause.webhookClause.webhookId
+                    )}
+                  />
+                )}
+              />
+            </div>
+            <WebhookClauseInput ruleIdx={ruleIdx} clauseIdx={clauseIdx} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -897,16 +873,6 @@ export const WebhookClauseInput: FC<WebhookClauseInputProps> = memo(
       formState: { errors },
     } = methods;
 
-    const webhookClause = useWatch({
-      control,
-      name: webhookClauseName,
-    });
-
-    const webhookConditionsListClause = useWatch({
-      control,
-      name: webhookConditionsListClauseName,
-    });
-
     const webhookList = useSelector<AppState, Webhook.AsObject[]>(
       (state) => selectAll(state.webhook),
       shallowEqual
@@ -915,6 +881,15 @@ export const WebhookClauseInput: FC<WebhookClauseInputProps> = memo(
       (state) => state.webhook.loading,
       shallowEqual
     );
+
+    const {
+      append,
+      remove,
+      fields: conditionsList,
+    } = useFieldArray({
+      control,
+      name: webhookConditionsListClauseName,
+    });
 
     useEffect(() => {
       dispatch(
@@ -926,14 +901,25 @@ export const WebhookClauseInput: FC<WebhookClauseInputProps> = memo(
       );
     }, []);
 
-    const webhookListOptions = webhookList.map((webhook) => ({
-      label: webhook.name,
-      value: webhook.id,
-    }));
+    const handleAddClauseCondition = useCallback(() => {
+      append({
+        id: uuid(),
+        filter: '',
+        operator: webhookOperatorOptions[0].value,
+        value: '',
+      });
+    }, [append]);
+
+    const handleRemoveCondition = useCallback(
+      (idx) => {
+        remove(idx);
+      },
+      [remove]
+    );
 
     return (
       <div className="">
-        {webhookConditionsListClause.map((condition, conditionIdx) => (
+        {conditionsList.map((condition: any, conditionIdx) => (
           <div key={condition.id} className="flex space-x-2 mt-2">
             <div
               className={classNames(
@@ -1019,7 +1005,7 @@ export const WebhookClauseInput: FC<WebhookClauseInputProps> = memo(
                   <button
                     type="button"
                     className="x-icon"
-                    // onClick={() => handleRemove(clauseIdx)}
+                    onClick={() => handleRemoveCondition(conditionIdx)}
                   >
                     <XIcon className="w-5 h-5" aria-hidden="true" />
                   </button>
@@ -1028,6 +1014,17 @@ export const WebhookClauseInput: FC<WebhookClauseInputProps> = memo(
             </div>
           </div>
         ))}
+        {editable && (
+          <div className="pt-4 flex">
+            <button
+              type="button"
+              className="btn-submit"
+              onClick={handleAddClauseCondition}
+            >
+              {f(messages.button.addCondition)}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
