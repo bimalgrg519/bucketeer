@@ -1,9 +1,22 @@
+import { AppState } from '@/modules';
+import {
+  listFeatures,
+  selectAll as selectAllFeatures,
+} from '@/modules/features';
+import { useCurrentEnvironment } from '@/modules/me';
+import { Feature } from '@/proto/feature/feature_pb';
+import { ListFeaturesRequest } from '@/proto/feature/service_pb';
 import { Dialog } from '@headlessui/react';
-import { FC } from 'react';
+import { ExclamationCircleIcon, CheckCircleIcon } from '@heroicons/react/solid';
+import { FC, useEffect, useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useIntl } from 'react-intl';
+import { shallowEqual, useSelector } from 'react-redux';
 
-import { FEATURE_UPDATE_COMMENT_MAX_LENGTH } from '../../constants/feature';
+import {
+  FEATURE_LIST_PAGE_SIZE,
+  FEATURE_UPDATE_COMMENT_MAX_LENGTH,
+} from '../../constants/feature';
 import { messages } from '../../lang/messages';
 import { classNames } from '../../utils/css';
 import { CheckBox } from '../CheckBox';
@@ -16,6 +29,8 @@ interface FeatureConfirmDialogProps {
   title: string;
   description: string;
   displayResetSampling?: boolean;
+  isArchive?: boolean;
+  featureId?: string;
 }
 
 export const FeatureConfirmDialog: FC<FeatureConfirmDialogProps> = ({
@@ -25,14 +40,63 @@ export const FeatureConfirmDialog: FC<FeatureConfirmDialogProps> = ({
   title,
   description,
   displayResetSampling,
+  isArchive,
+  featureId,
 }) => {
   const { formatMessage: f } = useIntl();
   const methods = useFormContext();
+  const currentEnvironment = useCurrentEnvironment();
+  const [flagList, setFlagList] = useState([]);
+
   const {
     register,
     control,
     formState: { errors, isSubmitting, isDirty, isValid },
   } = methods;
+
+  const features = useSelector<AppState, Feature.AsObject[]>(
+    (state) => selectAllFeatures(state.features),
+    shallowEqual
+  );
+
+  useEffect(() => {
+    if (isArchive && open) {
+      listFeatures({
+        environmentNamespace: currentEnvironment.namespace,
+        pageSize: 0,
+        cursor: '',
+        tags: [],
+        searchKeyword: null,
+        maintainerId: null,
+        orderBy: ListFeaturesRequest.OrderBy.DEFAULT,
+        orderDirection: ListFeaturesRequest.OrderDirection.ASC,
+      });
+    }
+  }, [isArchive, open]);
+
+  useEffect(() => {
+    if (isArchive && open && features.length > 0) {
+      setFlagList(
+        features.reduce((acc, feature) => {
+          if (
+            feature.prerequisitesList.find(
+              (prerequisite) => prerequisite.featureId === featureId
+            )
+          ) {
+            return [
+              ...acc,
+              {
+                id: feature.id,
+                name: feature.name,
+              },
+            ];
+          }
+          return acc;
+        }, [])
+      );
+    }
+  }, [isArchive, open, features]);
+
   return (
     <Modal open={open} onClose={onClose}>
       <Dialog.Title
@@ -44,7 +108,23 @@ export const FeatureConfirmDialog: FC<FeatureConfirmDialogProps> = ({
       <div className="mt-2">
         <p className="text-sm text-gray-500">{description}</p>
       </div>
-
+      {flagList.length > 0 && (
+        <div className="mt-4">
+          <div className="px-4 py-2 bg-red-100 border border-red-600 space-x-3 flex text-sm items-center">
+            <ExclamationCircleIcon className="text-red-600 w-8" />
+            <span>
+              You can't archive while other flags use this flag as a
+              prerequisite.
+            </span>
+          </div>
+        </div>
+      )}
+      <div className="mt-4">
+        <div className="px-4 py-2 bg-green-50 border border-green-500 space-x-3 flex text-sm items-center">
+          <CheckCircleIcon className="text-green-500 w-6" />
+          <span>Flag has not been requiested in the last 7 days.</span>
+        </div>
+      </div>
       <div className="mt-5">
         <label
           htmlFor="about"
