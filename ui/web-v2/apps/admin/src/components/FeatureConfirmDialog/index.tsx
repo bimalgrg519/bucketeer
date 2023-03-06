@@ -20,6 +20,7 @@ import {
 import { messages } from '../../lang/messages';
 import { classNames } from '../../utils/css';
 import { CheckBox } from '../CheckBox';
+import { getFlagStatus, FlagStatus } from '../FeatureList';
 import { Modal } from '../Modal';
 
 interface FeatureConfirmDialogProps {
@@ -31,6 +32,7 @@ interface FeatureConfirmDialogProps {
   displayResetSampling?: boolean;
   isArchive?: boolean;
   featureId?: string;
+  feature?: Feature.AsObject;
 }
 
 export const FeatureConfirmDialog: FC<FeatureConfirmDialogProps> = ({
@@ -42,11 +44,13 @@ export const FeatureConfirmDialog: FC<FeatureConfirmDialogProps> = ({
   displayResetSampling,
   isArchive,
   featureId,
+  feature,
 }) => {
   const { formatMessage: f } = useIntl();
   const methods = useFormContext();
   const currentEnvironment = useCurrentEnvironment();
   const [flagList, setFlagList] = useState([]);
+  const [isNotUsedFor7Days, setIsNotUsedFor7Days] = useState(false);
 
   const {
     register,
@@ -76,6 +80,8 @@ export const FeatureConfirmDialog: FC<FeatureConfirmDialogProps> = ({
 
   useEffect(() => {
     if (isArchive && open && features.length > 0) {
+      console.log('render ======');
+
       setFlagList(
         features.reduce((acc, feature) => {
           if (
@@ -95,7 +101,19 @@ export const FeatureConfirmDialog: FC<FeatureConfirmDialogProps> = ({
         }, [])
       );
     }
-  }, [isArchive, open, features]);
+  }, [isArchive, open, features, featureId]);
+
+  useEffect(() => {
+    if (
+      isArchive &&
+      open &&
+      feature &&
+      getFlagStatus(feature, new Date()) === FlagStatus.INACTIVE
+    ) {
+      console.log('render ======');
+      setIsNotUsedFor7Days(true);
+    }
+  }, [isArchive, open, feature]);
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -111,20 +129,31 @@ export const FeatureConfirmDialog: FC<FeatureConfirmDialogProps> = ({
       {flagList.length > 0 && (
         <div className="mt-4">
           <div className="px-4 py-2 bg-red-100 border border-red-600 space-x-3 flex text-sm items-center">
-            <ExclamationCircleIcon className="text-red-600 w-8" />
-            <span>
-              You can't archive while other flags use this flag as a
-              prerequisite.
-            </span>
+            <ExclamationCircleIcon className="text-red-600 w-8 self-start" />
+            <div>
+              <span>
+                You can't archive while other flags use this flag as a
+                prerequisite.
+              </span>
+              <ul className="list-disc pl-3 mt-1">
+                {flagList.map((flag) => (
+                  <li key={flag.id}>
+                    <p className="truncate w-60">{flag.name}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       )}
-      <div className="mt-4">
-        <div className="px-4 py-2 bg-green-50 border border-green-500 space-x-3 flex text-sm items-center">
-          <CheckCircleIcon className="text-green-500 w-6" />
-          <span>Flag has not been requiested in the last 7 days.</span>
+      {isNotUsedFor7Days && (
+        <div className="mt-4">
+          <div className="px-4 py-2 bg-green-50 border border-green-500 space-x-3 flex text-sm items-center">
+            <CheckCircleIcon className="text-green-500 w-6" />
+            <span>Flag has not been requiested in the last 7 days.</span>
+          </div>
         </div>
-      </div>
+      )}
       <div className="mt-5">
         <label
           htmlFor="about"
