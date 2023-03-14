@@ -69,6 +69,7 @@ export const AuditLogIndexPage: FC = memo(() => {
 
   const handleSearchOptionsChange = useCallback(
     (options) => {
+      console.log('options', options);
       updateURL({ ...options, page: 1 });
     },
     [updateURL]
@@ -94,6 +95,11 @@ export const AuditLogIndexPage: FC = memo(() => {
     const resource = searchOptions.resource
       ? Number(searchOptions.resource)
       : null;
+
+    console.log('from', from);
+    console.log('to', to);
+
+    // &from=1677953700&to=1678472100
     dispatch(
       listAuditLogs({
         environmentNamespace: currentEnvironment.namespace,
@@ -102,6 +108,8 @@ export const AuditLogIndexPage: FC = memo(() => {
         searchKeyword: searchOptions.q as string,
         orderBy: sort.orderBy,
         orderDirection: sort.orderDirection,
+        // from: Math.round(1678453647019 / 1000),
+        // to: Math.round(1678800342709 / 1000),
         from: from,
         to: to,
         resource: resource,

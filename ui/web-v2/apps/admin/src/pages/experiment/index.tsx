@@ -241,6 +241,9 @@ export const ExperimentIndexPage: FC = memo(() => {
 
   const handleAdd = useCallback(
     async (data) => {
+      console.log(1, data.startAt.getTime() / 1000);
+      console.log(2, data.stopAt.getTime() / 1000);
+      return;
       dispatch(
         createExperiment({
           environmentNamespace: currentEnvironment.namespace,
