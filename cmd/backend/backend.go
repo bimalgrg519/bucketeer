@@ -12,21 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -source=$GOFILE -package=mock -destination=./mock/$GOFILE
-package notifier
+package main
 
 import (
-	"context"
+	"log"
 
-	notificationproto "github.com/bucketeer-io/bucketeer/proto/notification"
-	senderproto "github.com/bucketeer-io/bucketeer/proto/notification/sender"
+	"github.com/bucketeer-io/bucketeer/pkg/backend/cmd/server"
+	"github.com/bucketeer-io/bucketeer/pkg/cli"
 )
 
-type Notifier interface {
-	Notify(
-		ctx context.Context,
-		notification *senderproto.Notification,
-		recipient *notificationproto.Recipient,
-		language notificationproto.Recipient_Language,
-	) error
+var (
+	name    = "bucketeer-backend"
+	version = ""
+	build   = ""
+)
+
+func main() {
+	app := cli.NewApp(name, "A/B Testing Microservice", version, build)
+	registerCommands(app)
+	err := app.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func registerCommands(app *cli.App) {
+	server.RegisterCommand(app, app)
 }
