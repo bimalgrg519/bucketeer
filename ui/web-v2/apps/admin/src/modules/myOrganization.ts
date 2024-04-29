@@ -1,4 +1,4 @@
-import { Organization } from "@/proto/environment/organization_pb";
+import { Organization } from '@/proto/environment/organization_pb';
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 import { getMyOrganizations } from '../grpc/account';
