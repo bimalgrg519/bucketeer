@@ -98,6 +98,12 @@ oauth:
   clientSecret:
   redirectUrls:
   issuer:
+  # oauth: google authentication
+  google:
+    issuer:
+    clientId:
+    clientSecret:
+    redirectUrl:
 
 webhook:
   baseURL:

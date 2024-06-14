@@ -46,7 +46,7 @@ tls:
     cert:
 serviceToken:
   secret:
-  token: 
+  token:
 oauth:
   key:
     secret: bucketeer-oauth-key
@@ -55,6 +55,13 @@ oauth:
   clientSecret: oauth-client-secret
   redirectUrls: https://google.com
   issuer: https://accounts.google.com
+  # oauth: google authentication
+  google:
+    issuer: https://accounts.google.com
+    clientId: bucketeer
+    clientSecret:
+    redirectUrl:
+
 webhook:
   baseURL: https://web-gateway.bucketeer.org
   kmsResourceName: vault
