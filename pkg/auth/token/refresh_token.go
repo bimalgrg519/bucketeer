@@ -12,22 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax = "proto3";
-
-package bucketeer.notification;
-option go_package = "github.com/bucketeer-io/bucketeer/proto/notification";
-
-message Recipient {
-  enum Type { SlackChannel = 0; }
-  enum Language {
-    ENGLISH = 0;
-    JAPANESE = 1;
-  }
-  Type type = 1;
-  SlackChannelRecipient slack_channel_recipient = 2;
-  Language language = 3;
-}
-
-message SlackChannelRecipient {
-  string webhook_url = 1;
-}
+package token
