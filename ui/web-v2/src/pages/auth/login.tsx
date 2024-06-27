@@ -1,6 +1,7 @@
 import React, { memo, FC } from 'react';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 // import { Link } from 'react-router-dom';
+import GoogleIconSvg from '../../assets/svg/google-icon.svg';
 
 import AuthWrapper from './authWrapper';
 
@@ -51,11 +52,7 @@ const Login: FC = memo(() => {
             <div className="spinner" />
           ) : (
             <>
-              <img
-                src="/assets/svg/google-icon.svg"
-                alt="email logo"
-                className="w-[18px]"
-              />
+              <GoogleIconSvg />
               <span className="text-sm text-gray-600">Log in With Google</span>
             </>
           )}
